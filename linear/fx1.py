@@ -10,7 +10,7 @@ warnings.filterwarnings('ignore') # 実行上問題ない注意は非表示に�
 # %matplotlib inline
 
 # dataフォルダの場所を各自指定してください
-data_dir = "./data/"
+data_dir = "../data/"
 
 # FXデータの読み込み
 data = pd.read_csv(data_dir + "USDJPY_day_1997_2017.csv")

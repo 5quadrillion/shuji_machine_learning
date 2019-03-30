@@ -4,13 +4,14 @@ import pandas as pd
 import matplotlib
 import matplotlib.pylab as plt
 import seaborn as sns
+import sys
 
 import warnings
 warnings.filterwarnings('ignore') # 実行上問題ない注意は非表示にする
 
 # dataフォルダの場所を各自指定してください
-data_dir = "./data/"
-data = pd.read_csv(data_dir + "USDJPY_day_1997_2017.csv") # FXデータの読み込み（データは同じリポジトリのdataフォルダに入っています）
+data_dir = "../data/"
+data = pd.read_csv(data_dir + "USDJPY_minute_20190104.csv") # FXデータの読み込み（データは同じリポジトリのdataフォルダに入っています）
 data.head() # データの概要を見てみます
 
 # pandasのDataFrameのままでは、扱いにくい+実行速度が遅いので、numpyに変換して処理します
@@ -99,12 +100,13 @@ for s in range(0, num_sihyou): # 日にちごとに横向きに並べる
     for i in range(0, day_ago):
         X[i:len(data2),day_ago*s+i] = data2[0:len(data2)-i,s+4]
 
-# 被説明変数となる Y = pre_day後の終値-当日終値 を作成します
+# 被説明変数となる Y = pre_minute後の終値-当日終値 を作成します
 Y = np.zeros(len(data2))
 
-# 何日後を値段の差を予測するのか決めます
-pre_day = 1
-Y[0:len(Y)-pre_day] = X[pre_day:len(X),0] - X[0:len(X)-pre_day,0]
+# 何分後を値段の差を予測するのか決めます
+pre_minute = int(sys.argv[1])
+print("pre_minute: {}".format(pre_minute))
+Y[0:len(Y)-pre_minute] = X[pre_minute:len(X),0] - X[0:len(X)-pre_minute,0]
 
 # 【重要】X, Yを正規化します
 original_X = np.copy(X) # コピーするときは、そのままイコールではダメ
@@ -117,11 +119,11 @@ for i in range(day_ago,len(X)):
     Y[i] =  Y[i] # X同士の引き算しているので、Yはそのまま
 
 # XとYを学習データとテストデータ(2017年～)に分ける
-X_train = X[200:5193,:] # 200日平均を使うので、それ以降を学習データに使用します
-Y_train = Y[200:5193]
+X_train = X[200:54206,:] # 200日平均を使うので、それ以降を学習データに使用します
+Y_train = Y[200:54206]
 
-X_test = X[5193:len(X)-pre_day,:]
-Y_test = Y[5193:len(Y)-pre_day]
+X_test = X[54206:len(X)-pre_minute,:]
+Y_test = Y[54206:len(Y)-pre_minute]
 
 # 学習データを使用して、線形回帰モデルを作成します
 from sklearn import linear_model # scikit-learnライブラリの関数を使用します
@@ -129,9 +131,9 @@ linear_reg_model = linear_model.LinearRegression()
 
 linear_reg_model.fit(X_train, Y_train) # モデルに対して、学習データをフィットさせ係数を学習させます
 
-print("回帰式モデルの係数")
-print(linear_reg_model.intercept_)
-print(linear_reg_model.coef_)
+# print("回帰式モデルの係数")
+# print(linear_reg_model.intercept_)
+# print(linear_reg_model.coef_)
 
 # 2017年のデータで予想し、グラフで予測具合を見る
 
@@ -151,8 +153,6 @@ for i in range(len(Y_pred)):
     if Y_pred[i] * Y_test[i] >=0:
         success_num+=1
 
-print("予測日数："+ str(len(Y_pred))+"、正解日数："+str(success_num)+"、正解率："+str(success_num/len(Y_pred)*100))
-
 # 2017年の予測結果の合計を計算ーーーーーーーーー
 # 前々日終値に比べて前日終値が高い場合は、買いとする
 sum_2017 = 0
@@ -163,7 +163,9 @@ for i in range(0,len(Y_test)): # len()で要素数を取得しています
     else:
         sum_2017 -= Y_test[i]
 
-print("2017年の利益合計：%1.3lf" %sum_2017)
+print(Y_test)
+print(Y_pred)
+print("予測数："+ str(len(Y_pred))+"\t正解数："+str(success_num)+"\t正解率："+str(success_num/len(Y_pred)*100)+"\t利益合計：%1.3lf" %sum_2017)
 
 
 # 予測結果の総和グラフを描くーーーーーーーーー
@@ -180,8 +182,8 @@ for i in range(1, len(result)): # 2017年の2日以降を格納
     else:
         total_return[i] = total_return[i-1] - Y_test[i]
 
-plt.cla()
-plt.plot(total_return)
-plt.show()
+# plt.cla()
+# plt.plot(total_return)
+# plt.show()
 
 
