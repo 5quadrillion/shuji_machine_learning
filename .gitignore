@@ -1,2 +1,4 @@
 .idea*
 USDJPY_minutes_2005_2019.csv
+output*
+api_key.txt

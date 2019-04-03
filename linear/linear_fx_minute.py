@@ -17,29 +17,29 @@ data.head() # データの概要を見てみます
 # pandasのDataFrameのままでは、扱いにくい+実行速度が遅いので、numpyに変換して処理します
 data2 = np.array(data)
 
-# 5日移動平均線を追加します
+# 5分移動平均線を追加します
 data2 = np.c_[data2, np.zeros((len(data2),1))] # 列の追加
 ave_day = 5
 for i in range(ave_day, len(data2)):
     tmp =data2[i-ave_day+1:i+1,4].astype(np.float) # pythonは0番目からindexが始まります
     data2[i,5] = np.mean(tmp)
-# 25日移動平均線を追加します
+# 21分移動平均線を追加します
 data2 = np.c_[data2, np.zeros((len(data2), 1))]
-ave_day = 25
+ave_day = 21
 for i in range(ave_day, len(data2)):
     tmp = data2[i - ave_day + 1:i + 1, 4].astype(np.float)
     data2[i, 6] = np.mean(tmp)
 
-# 75日移動平均線を追加します
+# 34分移動平均線を追加します
 data2 = np.c_[data2, np.zeros((len(data2), 1))]  # 列の追加
-ave_day = 75
+ave_day = 34
 for i in range(ave_day, len(data2)):
     tmp = data2[i - ave_day + 1:i + 1, 4].astype(np.float)
     data2[i, 7] = np.mean(tmp)
 
-# 200日移動平均線を追加します
+# 144分移動平均線を追加します
 data2 = np.c_[data2, np.zeros((len(data2), 1))]  # 列の追加
-ave_day = 200
+ave_day = 144
 for i in range(ave_day, len(data2)):
     tmp = data2[i - ave_day + 1:i + 1, 4].astype(np.float)
     data2[i, 8] = np.mean(tmp)
@@ -119,11 +119,11 @@ for i in range(day_ago,len(X)):
     Y[i] =  Y[i] # X同士の引き算しているので、Yはそのまま
 
 # XとYを学習データとテストデータ(2017年～)に分ける
-X_train = X[200:54206,:] # 200日平均を使うので、それ以降を学習データに使用します
-Y_train = Y[200:54206]
+X_train = X[144:144+1440*30,:] # 200日平均を使うので、それ以降を学習データに使用します
+Y_train = Y[144:144+1440*30]
 
-X_test = X[54206:len(X)-pre_minute,:]
-Y_test = Y[54206:len(Y)-pre_minute]
+X_test = X[144+1440*30:len(X)-pre_minute,:]
+Y_test = Y[144+1440*30:len(Y)-pre_minute]
 
 # 学習データを使用して、線形回帰モデルを作成します
 from sklearn import linear_model # scikit-learnライブラリの関数を使用します
@@ -163,8 +163,15 @@ for i in range(0,len(Y_test)): # len()で要素数を取得しています
     else:
         sum_2017 -= Y_test[i]
 
-print(Y_test)
-print(Y_pred)
+with open("output/result.txt", "w", encoding="utf-8") as f:
+    f.write("予測：")
+    for pred in Y_pred:
+        f.write("\t" + str(round(pred, 4)))
+    f.write("\n実際：")
+    for test in Y_test:
+        f.write("\t" + str(round(test, 4)))
+    # f.write("実際\t{0}".format(Y_test))
+
 print("予測数："+ str(len(Y_pred))+"\t正解数："+str(success_num)+"\t正解率："+str(success_num/len(Y_pred)*100)+"\t利益合計：%1.3lf" %sum_2017)
 
 
