@@ -40,6 +40,7 @@ if __name__ == '__main__':
     total_reward = 0
     total_judge = 0
     total_correct = 0
+    buy_sell_list = []
     while offset + m_day * (train_day + 1) < len(X) - pre_minute:
         X_train = X[offset: offset + m_day * train_day, :]  # 200日平均を使うので、それ以降を学習データに使用
         Y_train = Y[offset: offset + m_day * train_day]
@@ -60,8 +61,14 @@ if __name__ == '__main__':
         result.columns = ['Y_pred']
         result['Y_test'] = Y_test
 
-        sns.set_style('darkgrid')
-        sns.regplot(x='Y_pred', y='Y_test', data=result)  # plotする
+        # sns.set_style('darkgrid')
+        # sns.regplot(x='Y_pred', y='Y_test', data=result)  # plotする
+
+        for y in Y_pred:
+            if y > 0:
+                buy_sell_list.append(True)
+            else:
+                buy_sell_list.append(False)
 
         judge, correct, reward = util.get_result(Y_test=Y_test, Y_pred=Y_pred, output_path=args.output, result=result)
         total_reward = total_reward + reward
@@ -71,3 +78,21 @@ if __name__ == '__main__':
 
     print("予測総数：{0}\t正解数：{1}\t正解率：{2:.3f}\t利益合計：{3:.3f}".format(
         total_judge, total_correct, total_correct / total_judge * 100, total_reward))
+
+    pos = util.Position()
+    max_pos = 0
+    min_pos = 0
+    for i, f in enumerate(buy_sell_list):
+        pos.clear()
+        if i >= pre_minute:
+            for l in buy_sell_list[i - pre_minute:i]:
+                if l:
+                    pos.buy()
+                else:
+                    pos.sell()
+        if max_pos < pos.get_max_pos():
+            max_pos = pos.get_max_pos()
+        if min_pos > pos.get_min_pos():
+            min_pos = pos.get_min_pos()
+
+    print("最大ポジション: 買い...{0}\t売り...{1}".format(max_pos, min_pos))
