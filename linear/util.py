@@ -117,22 +117,22 @@ def normalize(_x, _y, _day_ago):
     return _x, _y
 
 
-def show_result(Y_test, Y_pred, output_path, result):
+def get_result(Y_test, Y_pred, output_path, result):
     # 正答率を計算
-    success_num = 0
+    correct_num = 0
     for i in range(len(Y_pred)):
         if Y_pred[i] * Y_test[i] >= 0:
-            success_num += 1
+            correct_num += 1
 
     # 予測結果の合計を計算ーーーーーーーーー
     # 前々日終値に比べて前日終値が高い場合は、買いとする
-    sum_2017 = 0
+    reward = 0
 
     for i in range(0, len(Y_test)):
         if Y_pred[i] >= 0:
-            sum_2017 += Y_test[i]
+            reward += Y_test[i]
         else:
-            sum_2017 -= Y_test[i]
+            reward -= Y_test[i]
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("予測：")
@@ -143,22 +143,24 @@ def show_result(Y_test, Y_pred, output_path, result):
             f.write("\t" + str(round(test, 4)))
             # f.write("実際\t{0}".format(Y_test))
 
-    print("予測数：" + str(len(Y_pred)) + "\t正解数：" + str(success_num) + "\t正解率：" + str(
-        success_num / len(Y_pred) * 100) + "\t利益合計：%1.3lf" % sum_2017)
+    print("予測数：{0}\t正解数：{1}\t正解率：{2:.3f}\t利益合計：{3:.3f}".format(
+        len(Y_pred), correct_num, correct_num / len(Y_pred) * 100, reward))
 
-    # 予測結果の総和グラフを描くーーーーーーーーー
-    total_return = np.zeros(len(Y_test))
+    return len(Y_pred), correct_num, reward
 
-    if Y_pred[0] >= 0:  # 2017年の初日を格納
-        total_return[0] = Y_test[0]
-    else:
-        total_return[0] = -Y_test[0]
-
-    for i in range(1, len(result)):  # 2017年の2日以降を格納
-        if Y_pred[i] >= 0:
-            total_return[i] = total_return[i - 1] + Y_test[i]
-        else:
-            total_return[i] = total_return[i - 1] - Y_test[i]
+    # # 予測結果の総和グラフを描くーーーーーーーーー
+    # total_return = np.zeros(len(Y_test))
+    #
+    # if Y_pred[0] >= 0:  # 2017年の初日を格納
+    #     total_return[0] = Y_test[0]
+    # else:
+    #     total_return[0] = -Y_test[0]
+    #
+    # for i in range(1, len(result)):  # 2017年の2日以降を格納
+    #     if Y_pred[i] >= 0:
+    #         total_return[i] = total_return[i - 1] + Y_test[i]
+    #     else:
+    #         total_return[i] = total_return[i - 1] - Y_test[i]
 
     # plt.cla()
     # plt.plot(total_return)
