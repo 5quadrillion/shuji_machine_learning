@@ -1,5 +1,6 @@
 # API接続設定のファイルを読み込む
 import configparser
+import numpy as np
 import pandas as pd
 import oandapy
 import datetime
@@ -56,6 +57,6 @@ res_hist_1m['time'] = res_hist_1m['time'].apply(lambda x: date_to_str(x))
 # 最初の5行を確認してみよう
 print(res_hist_1m.head())
 
-# 口座の基本情報
-res_acct_detail = oanda.get_account(account_id)
-print(res_acct_detail)
+data2 = np.array(res_hist_1m)
+
+print(data2)
