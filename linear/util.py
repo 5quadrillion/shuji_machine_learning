@@ -11,40 +11,41 @@ def get_args():
 
     parser.add_argument("--input", "-i", help="入力ファイル csv", default="../data/USDJPY_minute_20190104.csv")
     parser.add_argument("--output", "-o", help="出力ファイル",
-                        default="../output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
+                        default="output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
     parser.add_argument("--minute", "-m", help="何分後の値を予想するか", type=int, default=120)
     return parser.parse_args()
 
 
-def add_technical_values(_table):
-    # 5分移動平均線を追加します
+def add_technical_values(_table, _moving_average_list=[5, 21, 34, 144]):
+    # 5分移動平均線を追加
     _table = np.c_[_table, np.zeros((len(_table), 1))]  # 列の追加
-    ave_day = 5
-    for i in range(ave_day, len(_table)):
-        tmp = _table[i - ave_day + 1:i + 1, 4].astype(np.float)  # pythonは0番目からindexが始まります
+    ave = _moving_average_list[0]
+    for i in range(ave, len(_table)):
+        tmp = _table[i - ave + 1:i + 1, 4].astype(np.float)  # pythonは0番目からindexが始まります
         _table[i, 5] = np.mean(tmp)
-    # 21分移動平均線を追加します
+
+    # 21分移動平均線を追加
     _table = np.c_[_table, np.zeros((len(_table), 1))]
-    ave_day = 21
-    for i in range(ave_day, len(_table)):
-        tmp = _table[i - ave_day + 1:i + 1, 4].astype(np.float)
+    ave = _moving_average_list[1]
+    for i in range(ave, len(_table)):
+        tmp = _table[i - ave + 1:i + 1, 4].astype(np.float)
         _table[i, 6] = np.mean(tmp)
 
-    # 34分移動平均線を追加します
+    # 34分移動平均線を追加
     _table = np.c_[_table, np.zeros((len(_table), 1))]  # 列の追加
-    ave_day = 34
-    for i in range(ave_day, len(_table)):
-        tmp = _table[i - ave_day + 1:i + 1, 4].astype(np.float)
+    ave = _moving_average_list[2]
+    for i in range(ave, len(_table)):
+        tmp = _table[i - ave + 1:i + 1, 4].astype(np.float)
         _table[i, 7] = np.mean(tmp)
 
-    # 144分移動平均線を追加します
+    # 144分移動平均線を追加
     _table = np.c_[_table, np.zeros((len(_table), 1))]  # 列の追加
-    ave_day = 144
-    for i in range(ave_day, len(_table)):
-        tmp = _table[i - ave_day + 1:i + 1, 4].astype(np.float)
+    ave = _moving_average_list[3]
+    for i in range(ave, len(_table)):
+        tmp = _table[i - ave + 1:i + 1, 4].astype(np.float)
         _table[i, 8] = np.mean(tmp)
 
-    # 一目均衡表を追加します (9,26,52)
+    # 一目均衡表を追加 (9,26,52)
     para1 = 9
     para2 = 26
     para3 = 52
@@ -76,7 +77,7 @@ def add_technical_values(_table):
         tmp_low = _table[i - para3 + 1:i + 1, 3].astype(np.float)
         _table[i + para2, 12] = (np.max(tmp_high) + np.min(tmp_low)) / 2
 
-    # 25日ボリンジャーバンド（±1, 2シグマ）を追加します
+    # 25日ボリンジャーバンド（±1, 2シグマ）を追加
     parab = 25
     _table = np.c_[_table, np.zeros((len(_table), 4))]  # 列の追加
     for i in range(parab, len(_table)):

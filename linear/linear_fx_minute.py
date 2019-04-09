@@ -19,10 +19,11 @@ if __name__ == '__main__':
 
     DAY_AGO = 25  # 何日前までのデータを使用するのかを設定
     TECH_NUM = 1 + 4 + 4 + 4  # 終値1本、MVave4本、itimoku4本、ボリンジャー4本
+    mvave_list = [5, 21, 34, 144]
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     table = np.array(pd.read_csv(args.input))
-    table = util.add_technical_values(table)
+    table = util.add_technical_values(table, mvave_list)
 
     # 説明変数、非説明変数を作成
     X = util.generate_explanatory_variables(table, DAY_AGO, TECH_NUM)
@@ -32,11 +33,13 @@ if __name__ == '__main__':
     X, Y = util.normalize(X, Y, DAY_AGO)
 
     # XとYを学習データとテストデータ(2017年～)に分ける
-    X_train = X[144:144 + 1440 * 30, :]  # 200日平均を使うので、それ以降を学習データに使用
-    Y_train = Y[144:144 + 1440 * 30]
+    mv_width = mvave_list[-1]
+    m_day = 60 * 24
+    X_train = X[mv_width:mv_width + m_day * 40, :]  # 200日平均を使うので、それ以降を学習データに使用
+    Y_train = Y[mv_width:mv_width + m_day * 40]
 
-    X_test = X[144 + 1440 * 30:len(X) - pre_minute, :]
-    Y_test = Y[144 + 1440 * 30:len(Y) - pre_minute]
+    X_test = X[mv_width + m_day * 40:len(X) - pre_minute, :]
+    Y_test = Y[mv_width + m_day * 40:len(Y) - pre_minute]
 
     # 学習データを使用して、線形回帰モデルを作成します
     from sklearn import linear_model  # scikit-learnライブラリの関数を使用
