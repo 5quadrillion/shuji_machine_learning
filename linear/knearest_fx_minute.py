@@ -12,6 +12,8 @@ import time
 import util
 from sklearn import linear_model
 from sklearn.neighbors import KNeighborsRegressor
+import pickle
+import os
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
@@ -47,16 +49,28 @@ if __name__ == '__main__':
     total_judge = 0
     total_correct = 0
 
-    X_train = X[mvave_list[-1]: mvave_list[-1] + train_minute, :]
-    Y_train = Y[mvave_list[-1]: mvave_list[-1] + train_minute]
+    # モデル作成
+    if os.path.exists(args.model):
+        print("既存モデル使用")
+        with open(args.model, mode='rb') as fp:
+            model = pickle.load(fp)
+    else:
+        print("モデル作成開始")
+        X_train = X[mvave_list[-1]: mvave_list[-1] + train_minute, :]
+        Y_train = Y[mvave_list[-1]: mvave_list[-1] + train_minute]
 
-    print("モデル作成開始")
-    model = KNeighborsRegressor(n_neighbors=10)
-    model.fit(X_train, Y_train)
+        model = KNeighborsRegressor(n_neighbors=20)
+        model.fit(X_train, Y_train)
+        with open(args.model, mode='wb') as fp:
+            pickle.dump(model, fp)
 
     offset = mvave_list[-1] + train_minute
-
     print("予測開始")
+    total_min = 0
+    total_correct = 0
+    total_entry = 0
+    total_entry_correct = 0
+    total_reward = 0
     while offset + 1 + m_day < len(X) - pre_minute:
         X_test = X[offset + 1: offset + 1 + m_day, :]
         Y_test = Y[offset + 1: offset + 1 + m_day]
@@ -67,11 +81,14 @@ if __name__ == '__main__':
         result.columns = ['Y_pred']
         result['Y_test'] = Y_test
 
-        judge, correct, reward = util.get_result(Y_test=Y_test, Y_pred=Y_pred, output_path=args.output, result=result)
-        total_reward = total_reward + reward
-        total_judge = total_judge + judge
-        total_correct = total_correct + correct
+        sum_min, correct_num, entry_num, entry_correct_num, reward = util.get_result(Y_test=Y_test, Y_pred=Y_pred, output_path=args.output, result=result)
+        total_min += sum_min
+        total_correct += correct_num
+        total_entry += entry_num
+        total_entry_correct += entry_correct_num
+        total_reward += reward
+
         offset = offset + m_day
 
-    print("予測総数：{0}\t正解数：{1}\t正解率：{2:.3f}\t利益合計：{3:.3f}".format(
-        total_judge, total_correct, total_correct / total_judge * 100, total_reward))
+    print("予測数: {0}\t正解率: {1:.3f}\tエントリー数: {2}\tエントリー正解率: {3:.3f}\t利益合計：{4:.3f}".format(
+        total_min, total_correct / total_min * 100, total_entry, total_entry_correct / total_entry * 100, total_reward))

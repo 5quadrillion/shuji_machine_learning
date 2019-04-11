@@ -12,7 +12,8 @@ def get_args():
     parser.add_argument("--input", "-i", help="入力ファイル csv", default="../data/USDJPY_minute_20190104.csv")
     parser.add_argument("--output", "-o", help="出力ファイル",
                         default="output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
-    parser.add_argument("--minute", "-m", help="何分後の値を予想するか", type=int, default=120)
+    parser.add_argument("--minute", "-M", help="何分後の値を予想するか", type=int, default=120)
+    parser.add_argument("--model", "-m", help="モデルのdumpデータのpath", default="./model.pickle")
     return parser.parse_args()
 
 
@@ -128,11 +129,19 @@ def get_result(Y_test, Y_pred, output_path, result):
     # 前々日終値に比べて前日終値が高い場合は、買いとする
     reward = 0
 
+    entry_num = 0
+    entry_correct_num = 0
     for i in range(0, len(Y_test)):
         if Y_pred[i] >= 0.1:
             reward += Y_test[i]
+            entry_num += 1
+            if Y_test[i] >= 0:
+                entry_correct_num += 1
         if Y_pred[i] <= -0.1:
             reward -= Y_test[i]
+            entry_num += 1
+            if Y_test[i] <= 0:
+                entry_correct_num += 1
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("予測：")
@@ -143,10 +152,10 @@ def get_result(Y_test, Y_pred, output_path, result):
             f.write("\t" + str(round(test, 4)))
             # f.write("実際\t{0}".format(Y_test))
 
-    print("予測数：{0}\t正解数：{1}\t正解率：{2:.3f}\t利益合計：{3:.3f}".format(
-        len(Y_pred), correct_num, correct_num / len(Y_pred) * 100, reward))
+    print("予測数: {0}\t正解率: {1:.3f}\tエントリー数: {2}\tエントリー正解率: {3:.3f}\t利益合計：{4:.3f}".format(
+        len(Y_pred), correct_num / len(Y_pred) * 100, entry_num, entry_correct_num / entry_num * 100, reward))
 
-    return len(Y_pred), correct_num, reward
+    return len(Y_pred), correct_num, entry_num, entry_correct_num, reward
 
     # # 予測結果の総和グラフを描くーーーーーーーーー
     # total_return = np.zeros(len(Y_test))
