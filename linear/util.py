@@ -89,11 +89,11 @@ def add_technical_values(_table, _moving_average_list=[5, 21, 34, 144]):
     return _table
 
 
-def generate_explanatory_variables(_table, _day_ago, _technical_num):
-    ret_table = np.zeros((len(_table), _day_ago * _technical_num))
+def generate_explanatory_variables(_table, _learn_minute_ago, _technical_num):
+    ret_table = np.zeros((len(_table), _learn_minute_ago * _technical_num))
     for s in range(0, _technical_num):  # 日にちごとに横向きに並べる
-        for i in range(0, _day_ago):
-            ret_table[i:len(_table), _day_ago * s + i] = _table[0:len(_table) - i, s + 4]
+        for i in range(0, _learn_minute_ago):
+            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s + 4]
     return ret_table
 
 
@@ -129,9 +129,9 @@ def get_result(Y_test, Y_pred, output_path, result):
     reward = 0
 
     for i in range(0, len(Y_test)):
-        if Y_pred[i] >= 0:
+        if Y_pred[i] >= 0.1:
             reward += Y_test[i]
-        else:
+        if Y_pred[i] <= -0.1:
             reward -= Y_test[i]
 
     with open(output_path, "w", encoding="utf-8") as f:
