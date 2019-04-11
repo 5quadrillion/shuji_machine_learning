@@ -59,4 +59,4 @@ print(res_hist_1m.head())
 
 data2 = np.array(res_hist_1m)
 
-print(data2)
+# print(data2)

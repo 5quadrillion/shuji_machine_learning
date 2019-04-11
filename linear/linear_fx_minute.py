@@ -10,6 +10,7 @@ import argparse
 import datetime
 import time
 import util
+from sklearn import linear_model
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
@@ -34,7 +35,7 @@ if __name__ == '__main__':
 
     # XとYを学習データとテストデータ(2017年～)に分ける
     m_day = 60 * 24
-    train_day = 40
+    train_day = 30
     offset = mvave_list[-1]  # 最初、移動平均分は過去のデータがないと移動平均を取れない
 
     total_reward = 0
@@ -46,9 +47,6 @@ if __name__ == '__main__':
         Y_train = Y[offset: offset + m_day * train_day]
         X_test = X[offset + m_day * train_day: offset + m_day * (train_day + 1), :]
         Y_test = Y[offset + m_day * train_day: offset + m_day * (train_day + 1)]
-
-        # 学習データを使用して、線形回帰モデルを作成します
-        from sklearn import linear_model  # scikit-learnライブラリの関数を使用
 
         linear_reg_model = linear_model.LinearRegression()
 
