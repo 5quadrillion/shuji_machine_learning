@@ -10,9 +10,9 @@ def get_args():
     parser = argparse.ArgumentParser(description='線形回帰で未来チャートの予想をします')
 
     parser.add_argument("--input", "-i", help="入力ファイル csv", default="../data/USDJPY_minute_20190104.csv")
-    parser.add_argument("--output", "-o", help="出力ファイル",
-                        default="output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
-    parser.add_argument("--minute", "-M", help="何分後の値を予想するか", type=int, default=120)
+    parser.add_argument("--outpath", "-o", help="出力ファイル",
+                        default="output".format(int(time.mktime(datetime.datetime.now().timetuple()))))
+    parser.add_argument("--minute", "-M", help="何分後の値を予想するか", type=int, default=30)
     parser.add_argument("--model", "-m", help="モデルのdumpデータのpath", default="./model.pickle")
     return parser.parse_args()
 
@@ -118,7 +118,7 @@ def normalize(_x, _y, _day_ago):
     return _x, _y
 
 
-def get_result(Y_test, Y_pred, output_path, result):
+def get_result(Y_test, Y_pred, out_tsv_path):
     # 正答率を計算
     correct_num = 0
     for i in range(len(Y_pred)):
@@ -132,22 +132,22 @@ def get_result(Y_test, Y_pred, output_path, result):
     entry_num = 0
     entry_correct_num = 0
     for i in range(0, len(Y_test)):
-        if Y_pred[i] >= 0.1:
+        if Y_pred[i] >= 0.05:
             reward += Y_test[i]
             entry_num += 1
             if Y_test[i] >= 0:
                 entry_correct_num += 1
-        if Y_pred[i] <= -0.1:
+        if Y_pred[i] <= -0.05:
             reward -= Y_test[i]
             entry_num += 1
             if Y_test[i] <= 0:
                 entry_correct_num += 1
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("予測：")
+    with open(out_tsv_path, "w", encoding="utf-8") as f:
+        f.write("予測")
         for pred in Y_pred:
             f.write("\t" + str(round(pred, 4)))
-        f.write("\n実際：")
+        f.write("\n実際")
         for test in Y_test:
             f.write("\t" + str(round(test, 4)))
             # f.write("実際\t{0}".format(Y_test))

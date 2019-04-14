@@ -19,9 +19,12 @@ warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示に�
 
 if __name__ == '__main__':
     args = util.get_args()
+    if not os.path.exists(args.outpath):
+        os.makedirs(args.outpath)
+
     pre_minute = args.minute
 
-    LEARN_MINUTE_AGO = 30  # 何分前までのデータを学習に使用するのかを設定
+    LEARN_MINUTE_AGO = 120  # 何分前までのデータを学習に使用するのかを設定
     TECH_NUM = 1 + 4 + 4 + 4  # 終値1本、MVave4本、itimoku4本、ボリンジャー4本
     mvave_list = [5, 21, 34, 144]
 
@@ -71,6 +74,8 @@ if __name__ == '__main__':
     total_entry = 0
     total_entry_correct = 0
     total_reward = 0
+
+    counter = 0
     while offset + 1 + m_day < len(X) - pre_minute:
         X_test = X[offset + 1: offset + 1 + m_day, :]
         Y_test = Y[offset + 1: offset + 1 + m_day]
@@ -81,7 +86,8 @@ if __name__ == '__main__':
         result.columns = ['Y_pred']
         result['Y_test'] = Y_test
 
-        sum_min, correct_num, entry_num, entry_correct_num, reward = util.get_result(Y_test=Y_test, Y_pred=Y_pred, output_path=args.output, result=result)
+        sum_min, correct_num, entry_num, entry_correct_num, reward = util.get_result(
+            Y_test=Y_test, Y_pred=Y_pred, out_tsv_path="{0}/{1}.tsv".format(args.outpath, counter))
         total_min += sum_min
         total_correct += correct_num
         total_entry += entry_num
