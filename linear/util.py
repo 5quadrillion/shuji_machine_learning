@@ -90,19 +90,30 @@ def add_technical_values(_table, _moving_average_list=[5, 21, 34, 144]):
     return _table
 
 
-def generate_explanatory_variables(_table, _learn_minute_ago, _technical_num):
+def generate_explanatory_variables_with_tech(_table, _learn_minute_ago, _technical_num):
+    table_items = 5 # start/high/low/end/vol
     ret_table = np.zeros((len(_table), _learn_minute_ago * _technical_num))
     for s in range(0, _technical_num):  # 日にちごとに横向きに並べる
         for i in range(0, _learn_minute_ago):
-            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s + 4]
+            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s + table_items]
     return ret_table
 
 
-def generate_dependent_variables(_table, explanatory_table, _pre_minute):
+def generate_explanatory_variables(_table, _learn_minute_ago):
+    table_items = 5 # start/high/low/end/vol
+    ret_table = np.zeros((len(_table), _learn_minute_ago * table_items))
+    for s in range(0, table_items):  # 日にちごとに横向きに並べる
+        for i in range(0, _learn_minute_ago):
+            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s]
+    return ret_table
+
+
+def generate_dependent_variables(_table, explanatory_table, _predict_minute_later):
     ret_table = np.zeros(len(_table))
-    ret_table[0:len(ret_table) - _pre_minute] = \
-        explanatory_table[_pre_minute:len(explanatory_table), 0] \
-        - explanatory_table[0:len(explanatory_table) - _pre_minute, 0]
+    result_column = 0  # start を結果として使用
+    ret_table[0:len(ret_table) - _predict_minute_later] = \
+        explanatory_table[_predict_minute_later:len(explanatory_table), result_column] \
+        - explanatory_table[0:len(explanatory_table) - _predict_minute_later, result_column]
     return ret_table
 
 

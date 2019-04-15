@@ -30,12 +30,14 @@ if __name__ == '__main__':
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     print("データセット作成")
-    table = np.array(pd.read_csv(args.input))
-    table = util.add_technical_values(table, mvave_list)
+    raw_table = np.array(pd.read_csv(args.input))
+    table = np.zeros((len(raw_table), 5))
+    table[0:len(table), 0:5] = raw_table[0:len(raw_table), 1:6]  # 日付の列を削除
+    # table = util.add_technical_values(table, mvave_list)
 
     # 説明変数、非説明変数を作成
-    print("説明変数、非説明変数を作成")
-    X = util.generate_explanatory_variables(table, LEARN_MINUTE_AGO, TECH_NUM)
+    print("説明変数、被説明変数を作成")
+    X = util.generate_explanatory_variables(table, LEARN_MINUTE_AGO)
     Y = util.generate_dependent_variables(table, X, pre_minute)
 
     # 正規化
@@ -95,6 +97,7 @@ if __name__ == '__main__':
         total_reward += reward
 
         offset = offset + m_day
+        counter += 1
 
     print("予測数: {0}\t正解率: {1:.3f}\tエントリー数: {2}\tエントリー正解率: {3:.3f}\t利益合計：{4:.3f}".format(
         total_min, total_correct / total_min * 100, total_entry, total_entry_correct / total_entry * 100, total_reward))
