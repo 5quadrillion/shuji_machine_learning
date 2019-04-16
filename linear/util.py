@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import datetime
 import time
+from joblib import Parallel, delayed
 
 
 def get_args():
@@ -99,13 +100,19 @@ def generate_explanatory_variables_with_tech(_table, _learn_minute_ago, _technic
     return ret_table
 
 
-def generate_explanatory_variables(_table, _learn_minute_ago):
-    table_items = 5 # start/high/low/end/vol
-    ret_table = np.zeros((len(_table), _learn_minute_ago * table_items))
+# 並列化のための関数
+def __fix_table_for_exp(in_table, learn_minute_ago, table_items):
+    ret_table = np.zeros((len(in_table), learn_minute_ago * table_items))
     for s in range(0, table_items):  # 日にちごとに横向きに並べる
-        for i in range(0, _learn_minute_ago):
-            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s]
+        for i in range(0, learn_minute_ago):
+            ret_table[i:len(in_table), learn_minute_ago * s + i] = in_table[0:len(in_table) - i, s]
     return ret_table
+
+
+def generate_explanatory_variables(_table, _learn_minute_ago, n):
+    table_items = 5 # start/high/low/end/vol
+    result_tables = Parallel(n_jobs=n)([delayed(__fix_table_for_exp)(in_table, _learn_minute_ago, table_items) for in_table in np.array_split(_table, n)])
+    return np.vstack(result_tables)
 
 
 def generate_dependent_variables(_table, explanatory_table, _predict_minute_later):
@@ -117,16 +124,13 @@ def generate_dependent_variables(_table, explanatory_table, _predict_minute_late
     return ret_table
 
 
-def normalize(_x, _y, _day_ago):
-    original_X = np.copy(_x)  # コピーするときは、そのままイコールではダメ
-    tmp_mean = np.zeros(len(_x))
-
-    for i in range(_day_ago, len(_x)):
-        tmp_mean[i] = np.mean(original_X[i - _day_ago + 1:i + 1, 0])  # DAY_AGO 日分の平均値
+def normalize(_x, _minute_ago):
+    ret = np.copy(_x)
+    for i in range(_minute_ago, len(_x)):
+        tmp_mean = np.mean(_x[i - _minute_ago + 1:i + 1, 0])  # 平均値
         for j in range(0, _x.shape[1]):
-            _x[i, j] = (_x[i, j] - tmp_mean[i])  # Xを正規化
-        _y[i] = _y[i]  # X同士の引き算しているので、Yはそのまま
-    return _x, _y
+            ret[i, j] = (_x[i, j] - tmp_mean)  # Xを正規化
+    return ret
 
 
 def get_result(Y_test, Y_pred, out_tsv_path):
