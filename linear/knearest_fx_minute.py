@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     # 正規化
     print("正規化開始")
-    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize)(x, LEARN_MINUTE_AGO) for x in np.array_split(X, PARALLEL_NUM)])
+    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize2)(x, LEARN_MINUTE_AGO) for x in np.array_split(X, PARALLEL_NUM)])
     X = np.vstack(result_tables)
 
     # XとYを学習データとテストデータ(2017年～)に分ける
@@ -84,7 +84,10 @@ if __name__ == '__main__':
         X_test = X[offset + 1: offset + 1 + m_day, :]
         Y_test = Y[offset + 1: offset + 1 + m_day]
 
-        Y_pred = model.predict(X_test)  # 予測する
+        # result_tables = Parallel(n_jobs=PARALLEL_NUM)(
+        #     [delayed(model.predict)(x) for x in np.array_split(X_test, PARALLEL_NUM)])
+        # Y_pred = np.vstack(result_tables, axis=0)
+        Y_pred = model.predict(X_test)
 
         # result = pd.DataFrame(Y_pred)  # 予測
         # result.columns = ['Y_pred']

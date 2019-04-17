@@ -133,6 +133,17 @@ def normalize(_x, _minute_ago):
     return ret
 
 
+def normalize2(_x, _minute_ago):
+    ret = np.zeros((len(_x), 3))
+    # "<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>"
+    for i in range(0, len(_x)):
+        ret[i, 0] = _x[i, 0] - _x[i, 3]  # open/closeの差
+        if ret[i, 0] >= 0:
+            ret[i, 1] = _x[i, 1] - _x[i, 0] # 上髭の長さ
+            ret[i, 2] = _x[i, 2] - _x[i, 3] # 下髭の長さ（マイナス）
+    return ret
+
+
 def get_result(Y_test, Y_pred, out_tsv_path):
     # 正答率を計算
     correct_num = 0
