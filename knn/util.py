@@ -11,9 +11,11 @@ def get_args():
 
     parser.add_argument("--input", "-i", help="入力ファイル csv", default="../data/USDJPY_minute_20190104.csv")
     parser.add_argument("--outpath", "-o", help="出力ファイル",
-                        default="output".format(int(time.mktime(datetime.datetime.now().timetuple()))))
-    parser.add_argument("--minute", "-M", help="何分後の値を予想するか", type=int, default=30)
-    parser.add_argument("--model", "-m", help="モデルのdumpデータのpath", default="./model.pickle")
+                        default="output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
+    parser.add_argument("--learn_minute_ago", "-l", help="何分前までの値を使って学習するか", type=int, default=120)
+    parser.add_argument("--predict_minute_later", "-p", help="何分後の値を予想するか", type=int, default=30)
+    parser.add_argument("--nearest_neighbor", "-n", help="何要素近傍まで結果に寄与させるか", type=int, default=20)
+    parser.add_argument("--model", "-m", help="モデルのdumpデータのpath", default="")
     return parser.parse_args()
 
 

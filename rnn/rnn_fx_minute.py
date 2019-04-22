@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
             output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
             loss_op = util.loss(output_op, supervisor_ph)
-            training_op = util.training(loss_op)
+            training_op = util.training(optimizer, loss_op)
 
             summary_op = tf.summary.merge_all()
             init = tf.initialize_all_variables()
