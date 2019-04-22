@@ -11,13 +11,12 @@ import random
 num_of_input_nodes = 1
 num_of_hidden_nodes = 80
 num_of_output_nodes = 1
-length_of_sequences = 10
+length_of_sequences = 3
 num_of_training_epochs = 5000
 size_of_mini_batch = 100
 num_of_prediction_epochs = 100
 learning_rate = 0.01
 forget_bias = 0.8
-num_of_sample = 1000
 
 
 def get_args():
@@ -161,43 +160,43 @@ def normalize2(_x, _minute_ago):
 
 
 def inference(input_ph, istate_ph):
-    with tf.name_scope("inference") as scope:
-        weight1_var = tf.Variable(tf.truncated_normal(
+    with tf.compat.v1.name_scope("inference") as scope:
+        weight1_var = tf.Variable(tf.random.truncated_normal(
             [num_of_input_nodes, num_of_hidden_nodes], stddev=0.1), name="weight1")
-        weight2_var = tf.Variable(tf.truncated_normal(
+        weight2_var = tf.Variable(tf.random.truncated_normal(
             [num_of_hidden_nodes, num_of_output_nodes], stddev=0.1), name="weight2")
-        bias1_var = tf.Variable(tf.truncated_normal([num_of_hidden_nodes], stddev=0.1), name="bias1")
-        bias2_var = tf.Variable(tf.truncated_normal([num_of_output_nodes], stddev=0.1), name="bias2")
+        bias1_var = tf.Variable(tf.random.truncated_normal([num_of_hidden_nodes], stddev=0.1), name="bias1")
+        bias2_var = tf.Variable(tf.random.truncated_normal([num_of_output_nodes], stddev=0.1), name="bias2")
 
-        in1 = tf.transpose(input_ph, [1, 0, 2])
+        in1 = tf.transpose(a=input_ph, perm=[1, 0, 2])
         in2 = tf.reshape(in1, [-1, num_of_input_nodes])
         in3 = tf.matmul(in2, weight1_var) + bias1_var
         in4 = tf.split(in3, length_of_sequences, 0)
 
-        cell = tf.nn.rnn_cell.BasicLSTMCell(num_of_hidden_nodes, forget_bias=forget_bias, state_is_tuple=False)
-        rnn_output, states_op = tf.contrib.rnn.static_rnn(cell, in4, initial_state=istate_ph)
+        cell = tf.compat.v1.nn.rnn_cell.BasicLSTMCell(num_of_hidden_nodes, forget_bias=forget_bias, state_is_tuple=False)
+        rnn_output, states_op = tf.compat.v1.nn.static_rnn(cell, in4, initial_state=istate_ph)
         output_op = tf.matmul(rnn_output[-1], weight2_var) + bias2_var
 
         # Add summary ops to collect data
-        w1_hist = tf.summary.histogram("weights1", weight1_var)
-        w2_hist = tf.summary.histogram("weights2", weight2_var)
-        b1_hist = tf.summary.histogram("biases1", bias1_var)
-        b2_hist = tf.summary.histogram("biases2", bias2_var)
-        output_hist = tf.summary.histogram("output",  output_op)
+        w1_hist = tf.compat.v1.summary.histogram("weights1", weight1_var)
+        w2_hist = tf.compat.v1.summary.histogram("weights2", weight2_var)
+        b1_hist = tf.compat.v1.summary.histogram("biases1", bias1_var)
+        b2_hist = tf.compat.v1.summary.histogram("biases2", bias2_var)
+        output_hist = tf.compat.v1.summary.histogram("output",  output_op)
         results = [weight1_var, weight2_var, bias1_var,  bias2_var]
         return output_op, states_op, results
 
 
 def loss(output_op, supervisor_ph):
-    with tf.name_scope("loss") as scope:
-        square_error = tf.reduce_mean(tf.square(output_op - supervisor_ph))
+    with tf.compat.v1.name_scope("loss") as scope:
+        square_error = tf.reduce_mean(input_tensor=tf.square(output_op - supervisor_ph))
         loss_op = square_error
-        tf.summary.scalar("loss", loss_op)
+        tf.compat.v1.summary.scalar("loss", loss_op)
         return loss_op
 
 
 def training(optimizer, loss_op):
-    with tf.name_scope("training") as scope:
+    with tf.compat.v1.name_scope("training") as scope:
         training_op = optimizer.minimize(loss_op)
         return training_op
 
@@ -207,3 +206,39 @@ def get_batch(batch_size, X, t):
     xs = np.array([[[y] for y in list(X[r])] for r in rnum])
     ts = np.array([[t[r]] for r in rnum])
     return xs, ts
+
+
+def create_data(nb_of_samples, sequence_len):
+    X = np.zeros((nb_of_samples, sequence_len))
+    for row_idx in range(nb_of_samples):
+        X[row_idx, :] = np.around(np.random.rand(sequence_len)).astype(int)
+    # Create the targets for each sequence
+    t = np.sum(X, axis=1)
+    return X, t
+
+
+def make_prediction(nb_of_samples):
+    sequence_len = 10
+    xs, ts = create_data(nb_of_samples, sequence_len)
+    return np.array([[[y] for y in x] for x in xs]), np.array([[x] for x in ts])
+
+
+def calc_accuracy(output_op, input_ph, supervisor_ph, istate_ph, sess, prints=False):
+    inputs, ts = make_prediction(num_of_prediction_epochs)
+    pred_dict = {
+        input_ph:  inputs,
+        supervisor_ph: ts,
+        istate_ph:    np.zeros((num_of_prediction_epochs, num_of_hidden_nodes * 2)),
+    }
+    output = sess.run([output_op], feed_dict=pred_dict)
+
+    def print_result(i, p, q):
+        [print(list(x)[0]) for x in i]
+        print("output: %f, correct: %d" % (p, q))
+    if prints:
+        [print_result(i, p, q) for i, p, q in zip(inputs, output[0], ts)]
+
+    opt = abs(output - ts)[0]
+    total = sum([1 if x[0] < 0.05 else 0 for x in opt])
+    print("accuracy %f" % (total / float(len(ts))))
+    return output

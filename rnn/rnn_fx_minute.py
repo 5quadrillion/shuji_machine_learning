@@ -46,6 +46,7 @@ if __name__ == '__main__':
     print("正規化開始")
     result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize2)(x, args.learn_minute_ago) for x in np.array_split(X, PARALLEL_NUM)])
     X = np.vstack(result_tables)
+    print(X)
 
     # XとYを学習データとテストデータ(2017年～)に分ける
     print("学習データとテストデータの分離開始")
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     total_judge = 0
     total_correct = 0
 
-    filename = "KNNmodel/{}_M{}_L{}_N{}.pickle".format(args.model, args.predict_minute_later, args.learn_minute_ago, args.nearest_neighbor)
+    filename = "RNNmodel/{}_M{}_L{}_N{}.pickle".format(args.model, args.predict_minute_later, args.learn_minute_ago, args.nearest_neighbor)
     # モデル作成
     if os.path.exists(filename):
         print("既存モデル使用")
@@ -65,23 +66,23 @@ if __name__ == '__main__':
             model = pickle.load(fp)
     else:
         print("モデル作成開始")
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
+        optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
         with tf.Graph().as_default():
-            input_ph = tf.placeholder(tf.float32, [None, util.length_of_sequences, util.num_of_input_nodes],
+            input_ph = tf.compat.v1.placeholder(tf.float32, [None, util.length_of_sequences, util.num_of_input_nodes],
                                       name="input")
-            supervisor_ph = tf.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
-            istate_ph = tf.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
+            supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
+            istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
 
             output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
             loss_op = util.loss(output_op, supervisor_ph)
             training_op = util.training(optimizer, loss_op)
 
-            summary_op = tf.summary.merge_all()
-            init = tf.initialize_all_variables()
+            summary_op = tf.compat.v1.summary.merge_all()
+            init = tf.compat.v1.initialize_all_variables()
 
-            with tf.Session() as sess:
-                saver = tf.train.Saver()
-                summary_writer = tf.summary.FileWriter("/tmp/tensorflow_log", graph=sess.graph)
+            with tf.compat.v1.Session() as sess:
+                saver = tf.compat.v1.train.Saver()
+                summary_writer = tf.compat.v1.summary.FileWriter("/tmp/tensorflow_log", graph=sess.graph)
                 sess.run(init)
 
                 for epoch in range(util.num_of_training_epochs):
@@ -98,7 +99,7 @@ if __name__ == '__main__':
                         print("train#%d, train loss: %e" % (epoch, train_loss))
                         summary_writer.add_summary(summary_str, epoch)
                         if (epoch) % 500 == 0:
-                            util.calc_accuracy(output_op)
+                            util.calc_accuracy(output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
 
                 util.calc_accuracy(output_op, prints=True)
                 datas = sess.run(datas_op)
