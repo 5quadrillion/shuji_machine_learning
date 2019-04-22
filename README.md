@@ -15,3 +15,5 @@ $ python knearest_fx_minute.py -i ../data/USDJPY.csv -l 120 -p 15 -n 30 -m fulld
 # リンク
 - のび太と機械学習用のGitHubリポジトリを参考にさせていただいています。
   - https://qiita.com/sugulu/items/45e3cfaa78e5f13d9389
+- RNN
+  - https://qiita.com/yukiB/items/f6314d2861fc8d9b739f
