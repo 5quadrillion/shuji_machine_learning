@@ -14,6 +14,7 @@ from sklearn import linear_model
 from sklearn.neighbors import KNeighborsRegressor
 import pickle
 import os
+from joblib import Parallel, delayed
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
@@ -22,52 +23,56 @@ if __name__ == '__main__':
     if not os.path.exists(args.outpath):
         os.makedirs(args.outpath)
 
-    pre_minute = args.minute
-
-    LEARN_MINUTE_AGO = 120  # 何分前までのデータを学習に使用するのかを設定
-    TECH_NUM = 1 + 4 + 4 + 4  # 終値1本、MVave4本、itimoku4本、ボリンジャー4本
-    mvave_list = [5, 21, 34, 144]
+    PARALLEL_NUM = 7
+    # TECH_NUM = 1 + 4 + 4 + 4  # 終値1本、MVave4本、itimoku4本、ボリンジャー4本
+    # mvave_list = [5, 21, 34, 144]
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     print("データセット作成")
-    table = np.array(pd.read_csv(args.input))
-    table = util.add_technical_values(table, mvave_list)
+    # pandas_table = pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=5615872, engine='python')
+    table = np.array(pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=4500000, engine='python'), dtype=np.float)
+    # table = util.add_technical_values(table, mvave_list)
 
     # 説明変数、非説明変数を作成
-    print("説明変数、非説明変数を作成")
-    X = util.generate_explanatory_variables(table, LEARN_MINUTE_AGO, TECH_NUM)
-    Y = util.generate_dependent_variables(table, X, pre_minute)
+    print("説明変数、被説明変数を作成")
+    X = util.generate_explanatory_variables(_table=table, _learn_minute_ago=args.learn_minute_ago, n=PARALLEL_NUM)
+    Y = util.generate_dependent_variables(table, X, args.predict_minute_later)
+
+    # メモリクリア
+    table = None
 
     # 正規化
     print("正規化開始")
-    X, Y = util.normalize(X, Y, LEARN_MINUTE_AGO)
+    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize2)(x, args.learn_minute_ago) for x in np.array_split(X, PARALLEL_NUM)])
+    X = np.vstack(result_tables)
 
     # XとYを学習データとテストデータ(2017年～)に分ける
     print("学習データとテストデータの分離開始")
     m_day = 60 * 24
-    train_day = 100
+    train_day = 500
     train_minute = m_day * train_day
 
     total_reward = 0
     total_judge = 0
     total_correct = 0
 
+    filename = "KNNmodel/{}_M{}_L{}_N{}.pickle".format(args.model, args.predict_minute_later, args.learn_minute_ago, args.nearest_neighbor)
     # モデル作成
-    if os.path.exists(args.model):
+    if os.path.exists(filename):
         print("既存モデル使用")
-        with open(args.model, mode='rb') as fp:
+        with open(filename, mode='rb') as fp:
             model = pickle.load(fp)
     else:
         print("モデル作成開始")
-        X_train = X[mvave_list[-1]: mvave_list[-1] + train_minute, :]
-        Y_train = Y[mvave_list[-1]: mvave_list[-1] + train_minute]
+        X_train = X[0: train_minute, :]
+        Y_train = Y[0: train_minute]
 
-        model = KNeighborsRegressor(n_neighbors=20)
+        model = KNeighborsRegressor(n_neighbors=args.nearest_neighbor)
         model.fit(X_train, Y_train)
-        with open(args.model, mode='wb') as fp:
+        with open(filename, mode='wb') as fp:
             pickle.dump(model, fp)
 
-    offset = mvave_list[-1] + train_minute
+    offset = train_minute
     print("予測開始")
     total_min = 0
     total_correct = 0
@@ -76,15 +81,18 @@ if __name__ == '__main__':
     total_reward = 0
 
     counter = 0
-    while offset + 1 + m_day < len(X) - pre_minute:
+    while offset + 1 + m_day < len(X) - args.predict_minute_later:
         X_test = X[offset + 1: offset + 1 + m_day, :]
         Y_test = Y[offset + 1: offset + 1 + m_day]
 
-        Y_pred = model.predict(X_test)  # 予測する
+        result_tables = Parallel(n_jobs=PARALLEL_NUM)(
+            [delayed(model.predict)(x) for x in np.array_split(X_test, PARALLEL_NUM)])
+        Y_pred = np.hstack(result_tables)
+        # Y_pred = model.predict(X_test)
 
-        result = pd.DataFrame(Y_pred)  # 予測
-        result.columns = ['Y_pred']
-        result['Y_test'] = Y_test
+        # result = pd.DataFrame(Y_pred)  # 予測
+        # result.columns = ['Y_pred']
+        # result['Y_test'] = Y_test
 
         sum_min, correct_num, entry_num, entry_correct_num, reward = util.get_result(
             Y_test=Y_test, Y_pred=Y_pred, out_tsv_path="{0}/{1}.tsv".format(args.outpath, counter))
@@ -95,6 +103,7 @@ if __name__ == '__main__':
         total_reward += reward
 
         offset = offset + m_day
+        counter += 1
 
     print("予測数: {0}\t正解率: {1:.3f}\tエントリー数: {2}\tエントリー正解率: {3:.3f}\t利益合計：{4:.3f}".format(
         total_min, total_correct / total_min * 100, total_entry, total_entry_correct / total_entry * 100, total_reward))
