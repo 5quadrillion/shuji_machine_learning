@@ -25,12 +25,9 @@ if __name__ == '__main__':
         os.makedirs(args.outpath)
 
     PARALLEL_NUM = 7
-    # TECH_NUM = 1 + 4 + 4 + 4  # 終値1本、MVave4本、itimoku4本、ボリンジャー4本
-    # mvave_list = [5, 21, 34, 144]
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     print("データセット作成")
-    # pandas_table = pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=5615872, engine='python')
     table = np.array(pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=4500000, engine='python'), dtype=np.float)
     # table = util.add_technical_values(table, mvave_list)
 
@@ -48,59 +45,45 @@ if __name__ == '__main__':
     X = np.vstack(result_tables)
     print(X)
 
-    # XとYを学習データとテストデータ(2017年～)に分ける
-    print("学習データとテストデータの分離開始")
-    m_day = 60 * 24
-    train_day = 500
-    train_minute = m_day * train_day
-
-    total_reward = 0
-    total_judge = 0
-    total_correct = 0
-
-    filename = "RNNmodel/{}_M{}_L{}_N{}.pickle".format(args.model, args.predict_minute_later, args.learn_minute_ago, args.nearest_neighbor)
     # モデル作成
-    if os.path.exists(filename):
-        print("既存モデル使用")
-        with open(filename, mode='rb') as fp:
-            model = pickle.load(fp)
-    else:
-        print("モデル作成開始")
-        optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
-        with tf.Graph().as_default():
-            input_ph = tf.compat.v1.placeholder(tf.float32, [None, util.length_of_sequences, util.num_of_input_nodes],
-                                      name="input")
-            supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
-            istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
+    print("モデル作成開始")
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
+    with tf.Graph().as_default():
+        input_ph = tf.compat.v1.placeholder(tf.float32, [None, util.length_of_sequences, util.num_of_input_nodes],
+                                  name="input")
+        supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
+        istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
 
-            output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
-            loss_op = util.loss(output_op, supervisor_ph)
-            training_op = util.training(optimizer, loss_op)
+        output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
+        loss_op = util.loss(output_op, supervisor_ph)
+        training_op = util.training(optimizer, loss_op)
 
-            summary_op = tf.compat.v1.summary.merge_all()
-            init = tf.compat.v1.initialize_all_variables()
+        summary_op = tf.compat.v1.summary.merge_all()
+        init = tf.compat.v1.initialize_all_variables()
 
-            with tf.compat.v1.Session() as sess:
-                saver = tf.compat.v1.train.Saver()
-                summary_writer = tf.compat.v1.summary.FileWriter("/tmp/tensorflow_log", graph=sess.graph)
-                sess.run(init)
+        with tf.compat.v1.Session() as sess:
+            saver = tf.compat.v1.train.Saver()
+            summary_writer = tf.compat.v1.summary.FileWriter("/tmp/tensorflow_log", graph=sess.graph)
+            sess.run(init)
 
-                for epoch in range(util.num_of_training_epochs):
-                    inputs, supervisors = util.get_batch(util.size_of_mini_batch, X, Y)
-                    train_dict = {
-                        input_ph: inputs,
-                        supervisor_ph: supervisors,
-                        istate_ph: np.zeros((util.size_of_mini_batch, util.num_of_hidden_nodes * 2)),
-                    }
-                    sess.run(training_op, feed_dict=train_dict)
+            for epoch in range(util.num_of_training_epochs):
+                inputs, supervisors = util.get_batch(util.size_of_mini_batch, X, Y)
+                train_dict = {
+                    input_ph: inputs,
+                    supervisor_ph: supervisors,
+                    istate_ph: np.zeros((util.size_of_mini_batch, util.num_of_hidden_nodes * 2)),
+                }
+                sess.run(training_op, feed_dict=train_dict)
 
-                    if (epoch) % 100 == 0:
-                        summary_str, train_loss = sess.run([summary_op, loss_op], feed_dict=train_dict)
-                        print("train#%d, train loss: %e" % (epoch, train_loss))
-                        summary_writer.add_summary(summary_str, epoch)
-                        if (epoch) % 500 == 0:
-                            util.calc_accuracy(output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
+                if (epoch) % 100 == 0:
+                    summary_str, train_loss = sess.run([summary_op, loss_op], feed_dict=train_dict)
+                    print("train#%d, train loss: %e" % (epoch, train_loss))
+                    summary_writer.add_summary(summary_str, epoch)
+                    if (epoch) % 500 == 0:
+                        util.calc_accuracy(output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
 
-                util.calc_accuracy(output_op, prints=True)
-                datas = sess.run(datas_op)
-                saver.save(sess, filename)
+            util.calc_accuracy(output_op, prints=True)
+            datas = sess.run(datas_op)
+            filename = "RNNmodel/{}_M{}_L{}_N{}.ckpt".format(args.model, args.predict_minute_later,
+                                                               args.learn_minute_ago, args.nearest_neighbor)
+            saver.save(sess, filename)

@@ -115,16 +115,15 @@ def generate_explanatory_variables_with_tech(_table, _learn_minute_ago, _technic
     return ret_table
 
 
-# 並列化のための関数
-def __fix_table_for_exp(in_table, learn_minute_ago, table_items):
-    ret_table = np.zeros((len(in_table), learn_minute_ago * table_items))
-    for s in range(0, table_items):  # 日にちごとに横向きに並べる
-        for i in range(0, learn_minute_ago):
-            ret_table[i:len(in_table), learn_minute_ago * s + i] = in_table[0:len(in_table) - i, s]
-    return ret_table
-
-
 def generate_explanatory_variables(_table, _learn_minute_ago, n):
+    # 並列化のための関数
+    def __fix_table_for_exp(in_table, learn_minute_ago, table_items):
+        ret_table = np.zeros((len(in_table), learn_minute_ago * table_items))
+        for s in range(0, table_items):  # 日にちごとに横向きに並べる
+            for i in range(0, learn_minute_ago):
+                ret_table[i:len(in_table), learn_minute_ago * s + i] = in_table[0:len(in_table) - i, s]
+        return ret_table
+
     table_items = 5 # start/high/low/end/vol
     result_tables = Parallel(n_jobs=n)([delayed(__fix_table_for_exp)(in_table, _learn_minute_ago, table_items) for in_table in np.array_split(_table, n)])
     return np.vstack(result_tables)
@@ -218,8 +217,7 @@ def create_data(nb_of_samples, sequence_len):
 
 
 def make_prediction(nb_of_samples):
-    sequence_len = 10
-    xs, ts = create_data(nb_of_samples, sequence_len)
+    xs, ts = create_data(nb_of_samples, length_of_sequences)
     return np.array([[[y] for y in x] for x in xs]), np.array([[x] for x in ts])
 
 
