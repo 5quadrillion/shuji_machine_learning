@@ -1,0 +1,2 @@
+model_checkpoint_path: "fulldata_M15_L120_N30.ckpt"
+all_model_checkpoint_paths: "fulldata_M15_L120_N30.ckpt"

@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     print("データセット作成")
-    table = np.array(pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=4500000, engine='python'), dtype=np.float)
+    table = np.array(pd.read_csv(args.input, usecols=util.USE_COLS, sep=",", skipfooter=5000000, engine='python'), dtype=np.float)
     # table = util.add_technical_values(table, mvave_list)
 
     # 説明変数、非説明変数を作成
@@ -41,20 +41,27 @@ if __name__ == '__main__':
 
     # 正規化
     print("正規化開始")
-    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize2)(x, args.learn_minute_ago) for x in np.array_split(X, PARALLEL_NUM)])
+    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize)(x) for x in np.array_split(X, PARALLEL_NUM)])
     X = np.vstack(result_tables)
-    print(X)
+
+    # 学習用とテストように分ける
+    learning_len = int(len(X)*0.8)
+    X_train = X[0: learning_len, :]
+    Y_train = Y[0: learning_len]
+
+    X_test = X[learning_len:, :]
+    Y_test = Y[learning_len:]
 
     # モデル作成
     print("モデル作成開始")
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
     with tf.Graph().as_default():
-        input_ph = tf.compat.v1.placeholder(tf.float32, [None, util.length_of_sequences, util.num_of_input_nodes],
+        input_ph = tf.compat.v1.placeholder(tf.float32, [None, X_train.shape[1], util.num_of_input_nodes],
                                   name="input")
         supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
         istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
 
-        output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
+        output_op, states_op, datas_op = util.inference(input_ph, istate_ph, args.learn_minute_ago)
         loss_op = util.loss(output_op, supervisor_ph)
         training_op = util.training(optimizer, loss_op)
 
@@ -67,7 +74,7 @@ if __name__ == '__main__':
             sess.run(init)
 
             for epoch in range(util.num_of_training_epochs):
-                inputs, supervisors = util.get_batch(util.size_of_mini_batch, X, Y)
+                inputs, supervisors = util.get_batch(util.size_of_mini_batch, X_train, Y_train)
                 train_dict = {
                     input_ph: inputs,
                     supervisor_ph: supervisors,
@@ -80,9 +87,9 @@ if __name__ == '__main__':
                     print("train#%d, train loss: %e" % (epoch, train_loss))
                     summary_writer.add_summary(summary_str, epoch)
                     if (epoch) % 500 == 0:
-                        util.calc_accuracy(output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
+                        util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess)
 
-            util.calc_accuracy(output_op, prints=True)
+            util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
             datas = sess.run(datas_op)
             filename = "RNNmodel/{}_M{}_L{}_N{}.ckpt".format(args.model, args.predict_minute_later,
                                                                args.learn_minute_ago, args.nearest_neighbor)

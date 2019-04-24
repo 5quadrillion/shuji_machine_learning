@@ -1,0 +1,26 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 0 issues that require attention
+--------------------------------------------------------------------------------
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'rnn_fx_minute.py'
+ outputting to 'rnn_fx_minute2.py'
+--------------------------------------------------------------------------------
+
+56:11: INFO: Renamed 'tf.InteractiveSession' to 'tf.compat.v1.InteractiveSession'
+58:4: INFO: Renamed 'tf.set_random_seed' to 'tf.compat.v1.set_random_seed'
+75:8: INFO: Renamed 'tf.placeholder' to 'tf.compat.v1.placeholder'
+77:8: INFO: Renamed 'tf.placeholder' to 'tf.compat.v1.placeholder'
+80:11: INFO: Renamed 'tf.nn.rnn_cell.BasicRNNCell' to 'tf.compat.v1.nn.rnn_cell.BasicRNNCell'
+81:36: INFO: Added keywords to args of function 'tf.shape'
+82:26: INFO: Renamed 'tf.nn.dynamic_rnn' to 'tf.compat.v1.nn.dynamic_rnn'
+93:11: INFO: Added keywords to args of function 'tf.reduce_mean'
+94:16: INFO: Renamed 'tf.train.AdamOptimizer' to 'tf.compat.v1.train.AdamOptimizer'
+105:13: INFO: Renamed 'tf.global_variables_initializer' to 'tf.compat.v1.global_variables_initializer'
+--------------------------------------------------------------------------------
+
