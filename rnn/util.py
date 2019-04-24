@@ -15,7 +15,7 @@ num_of_output_nodes = 1
 num_of_training_epochs = 5000
 size_of_mini_batch = 100
 num_of_prediction_epochs = 100
-learning_rate = 0.5
+learning_rate = 0.01
 forget_bias = 0.8
 
 
