@@ -56,8 +56,7 @@ if __name__ == '__main__':
     print("モデル作成開始")
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
     with tf.Graph().as_default():
-        input_ph = tf.compat.v1.placeholder(tf.float32, [None, X_train.shape[1], util.num_of_input_nodes],
-                                  name="input")
+        input_ph = tf.compat.v1.placeholder(tf.float32, [None, X_train.shape[1], util.num_of_input_nodes], name="input")
         supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
         istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
 
@@ -87,9 +86,9 @@ if __name__ == '__main__':
                     print("train#%d, train loss: %e" % (epoch, train_loss))
                     summary_writer.add_summary(summary_str, epoch)
                     if (epoch) % 500 == 0:
-                        util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess)
+                        util.calc_accuracy(X_test, np.array([[y] for y in Y_test]), output_op, input_ph, supervisor_ph, istate_ph, sess)
 
-            util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
+            util.calc_accuracy(X_test, np.array([[y] for y in Y_test]), output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
             datas = sess.run(datas_op)
             filename = "RNNmodel/{}_M{}_L{}_N{}.ckpt".format(args.model, args.predict_minute_later,
                                                                args.learn_minute_ago, args.nearest_neighbor)
