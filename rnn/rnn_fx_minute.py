@@ -47,12 +47,18 @@ if __name__ == '__main__':
     X = np.vstack(result_tables)
 
     # 学習用とテストように分ける
-    learning_len = int(len(X)*0.8)
+    learning_len = int(len(X)*0.8/120) * 120
+    end = int(len(X)/120) * 120
     X_train = X[0: learning_len, :]
     Y_train = Y[0: learning_len]
 
-    X_test = X[learning_len:, :]
-    Y_test = Y[learning_len:]
+    X_test = X[learning_len:end, :]
+    Y_test = Y[learning_len:end]
+
+    print("{0}: {1}".format(X_train.shape[0], X_train.shape[1]))
+    print("{0}".format(Y_train.shape[0]))
+    print("{0}: {1}".format(X_test.shape[0], X_test.shape[1]))
+    print("{0}".format(Y_test.shape[0]))
 
     # モデル作成
     print("モデル作成開始")

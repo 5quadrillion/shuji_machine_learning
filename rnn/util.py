@@ -10,14 +10,14 @@ import random
 
 USE_COLS = ["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"]
 num_of_input_nodes = 1
-num_of_hidden_nodes = 80
+num_of_hidden_nodes = 120
 num_of_output_nodes = 1
 num_of_training_epochs = 5000
 size_of_mini_batch = 100
 num_of_prediction_epochs = 100
 learning_rate = 0.01
 forget_bias = 0.8
-sequesnce_num = len(USE_COLS) + 12
+sequesnce_num = 17
 
 def get_args():
     # 準備
@@ -27,8 +27,7 @@ def get_args():
     parser.add_argument("--outpath", "-o", help="出力ファイル",
                         default="output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
     parser.add_argument("--learn_minute_ago", "-l", help="何分前までの値を使って学習するか", type=int, default=120)
-    parser.add_argument("--predict_minute_later", "-p", help="何分後の値を予想するか", type=int, default=30)
-    parser.add_argument("--nearest_neighbor", "-n", help="何要素近傍まで結果に寄与させるか", type=int, default=20)
+    parser.add_argument("--predict_minute_later", "-p", help="何分後の値を予想するか", type=int, default=15)
     parser.add_argument("--model", "-m", help="モデルのdumpデータのpath", default="")
     return parser.parse_args()
 
