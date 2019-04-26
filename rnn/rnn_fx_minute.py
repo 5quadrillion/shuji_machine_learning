@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     print("データセット作成")
-    table = np.array(pd.read_csv(args.input, usecols=util.USE_COLS, sep=",", skipfooter=5000000, engine='python'), dtype=np.float)
+    table = np.array(pd.read_csv(args.input, usecols=util.USE_COLS, sep=",", skipfooter=3000000, engine='python'), dtype=np.float)
     result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.add_technical_values)(x) for x in np.array_split(table, PARALLEL_NUM)])
     table = np.vstack(result_tables)
 
@@ -36,7 +36,8 @@ if __name__ == '__main__':
     print("説明変数、被説明変数を作成")
     # X = util.generate_explanatory_variables(_table=table, _learn_minute_ago=args.learn_minute_ago, n=PARALLEL_NUM)
     X = table
-    Y = util.generate_dependent_variables(table, X, args.predict_minute_later)
+    Y = util.generate_dependent_variables(table, args.predict_minute_later)
+    print(Y)
 
     # メモリクリア
     table = None
@@ -98,6 +99,6 @@ if __name__ == '__main__':
 
             util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
             datas = sess.run(datas_op)
-            filename = "RNNmodel/{}_M{}_L{}_N{}.ckpt".format(args.model, args.predict_minute_later,
-                                                               args.learn_minute_ago, args.nearest_neighbor)
-            saver.save(sess, filename)
+            filename = "RNNmodel/{}_M{}_L{}.ckpt".format(args.model, args.predict_minute_later,
+                                                               args.learn_minute_ago)
+            # saver.save(sess, filename)

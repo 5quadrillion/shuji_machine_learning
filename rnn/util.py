@@ -10,7 +10,7 @@ import random
 
 USE_COLS = ["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"]
 num_of_input_nodes = 1
-num_of_hidden_nodes = 120
+num_of_hidden_nodes = 80
 num_of_output_nodes = 1
 num_of_training_epochs = 5000
 size_of_mini_batch = 100
@@ -126,12 +126,12 @@ def generate_explanatory_variables(_table, _learn_minute_ago, n):
     return np.vstack(result_tables)
 
 
-def generate_dependent_variables(_table, explanatory_table, _predict_minute_later):
+def generate_dependent_variables(_table, _predict_minute_later):
     ret_table = np.zeros(len(_table))
     result_column = 0  # start を結果として使用
     ret_table[0:len(ret_table) - _predict_minute_later] = \
-        explanatory_table[_predict_minute_later:len(explanatory_table), result_column] \
-        - explanatory_table[0:len(explanatory_table) - _predict_minute_later, result_column]
+        _table[_predict_minute_later:len(_table), result_column] \
+        - _table[0:len(_table) - _predict_minute_later, result_column]
     return ret_table
 
 
@@ -205,7 +205,8 @@ def get_batch(batch_size, X, y):
 
 
 def make_prediction(X_test, Y_test):
-    return np.array([[[y] for y in x] for x in X_test]), np.array([[x] for x in Y_test])
+    r = random.randint(0, len(X_test) - size_of_mini_batch - 1)
+    return np.array([[[y] for y in x] for x in X_test[r:r+size_of_mini_batch]]), np.array([[x] for x in Y_test[r:r+size_of_mini_batch]])
 
 
 def calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=False):
