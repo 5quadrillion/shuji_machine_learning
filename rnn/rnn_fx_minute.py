@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     print("データセット作成")
-    table = np.array(pd.read_csv(args.input, usecols=util.USE_COLS, sep=",", skipfooter=3000000, engine='python'), dtype=np.float)
+    table = np.array(pd.read_csv(args.input, usecols=util.USE_COLS, sep=",", skipfooter=1, engine='python'), dtype=np.float)
     result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.add_technical_values)(x) for x in np.array_split(table, PARALLEL_NUM)])
     table = np.vstack(result_tables)
 
@@ -37,7 +37,6 @@ if __name__ == '__main__':
     # X = util.generate_explanatory_variables(_table=table, _learn_minute_ago=args.learn_minute_ago, n=PARALLEL_NUM)
     X = table
     Y = util.generate_dependent_variables(table, args.predict_minute_later)
-    print(Y)
 
     # メモリクリア
     table = None
@@ -48,18 +47,12 @@ if __name__ == '__main__':
     X = np.vstack(result_tables)
 
     # 学習用とテストように分ける
-    learning_len = int(len(X)*0.8/120) * 120
-    end = int(len(X)/120) * 120
+    learning_len = int(len(X)*0.8)
     X_train = X[0: learning_len, :]
     Y_train = Y[0: learning_len]
 
-    X_test = X[learning_len:end, :]
-    Y_test = Y[learning_len:end]
-
-    print("{0}: {1}".format(X_train.shape[0], X_train.shape[1]))
-    print("{0}".format(Y_train.shape[0]))
-    print("{0}: {1}".format(X_test.shape[0], X_test.shape[1]))
-    print("{0}".format(Y_test.shape[0]))
+    X_test = X[learning_len: -args.predict_minute_later, :]
+    Y_test = Y[learning_len: -args.predict_minute_later]
 
     # モデル作成
     print("モデル作成開始")

@@ -220,11 +220,13 @@ def calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph,
 
     def print_result(i, p, q):
         [print(list(x)[0]) for x in i]
-        print("output: %f, correct: %d" % (p, q))
+        print("output: {}, correct: {}".format(p, q))
     if prints:
         [print_result(i, p, q) for i, p, q in zip(inputs, output[0], ys)]
 
-    opt = abs(output - ys)[0]
-    total = sum([1 if x[0] < 0.05 else 0 for x in opt])
+    total = 0
+    for n in range(0, len(ys)):
+        if output[0][n]*ys[n] > 0:
+            total += 1
     print("accuracy %f" % (total / float(len(ys))))
     return output
