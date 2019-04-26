@@ -17,7 +17,7 @@ size_of_mini_batch = 100
 num_of_prediction_epochs = 100
 learning_rate = 0.01
 forget_bias = 0.8
-
+sequesnce_num = len(USE_COLS) + 12
 
 def get_args():
     # 準備
@@ -110,7 +110,7 @@ def generate_explanatory_variables_with_tech(_table, _learn_minute_ago, _technic
     ret_table = np.zeros((len(_table), _learn_minute_ago * _technical_num))
     for s in range(0, _technical_num):  # 日にちごとに横向きに並べる
         for i in range(0, _learn_minute_ago):
-            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s + len(USE_COLS)]
+            ret_table[i:len(_table), _learn_minute_ago * s + i] = _table[0:len(_table) - i, s + sequesnce_num]
     return ret_table
 
 
@@ -123,7 +123,7 @@ def generate_explanatory_variables(_table, _learn_minute_ago, n):
                 ret_table[i:len(in_table), learn_minute_ago * s + i] = in_table[0:len(in_table) - i, s]
         return ret_table
 
-    result_tables = Parallel(n_jobs=n)([delayed(__fix_table_for_exp)(in_table, _learn_minute_ago, len(USE_COLS)) for in_table in np.array_split(_table, n)])
+    result_tables = Parallel(n_jobs=n)([delayed(__fix_table_for_exp)(in_table, _learn_minute_ago, sequesnce_num) for in_table in np.array_split(_table, n)])
     return np.vstack(result_tables)
 
 
@@ -156,7 +156,7 @@ def normalize2(_x, _minute_ago):
     return ret
 
 
-def inference(input_ph, istate_ph, learn_minute_ago):
+def inference(input_ph, istate_ph):
     with tf.compat.v1.name_scope("inference") as scope:
         weight1_var = tf.Variable(tf.random.truncated_normal(
             [num_of_input_nodes, num_of_hidden_nodes], stddev=0.1), name="weight1")
@@ -168,7 +168,7 @@ def inference(input_ph, istate_ph, learn_minute_ago):
         in1 = tf.transpose(a=input_ph, perm=[1, 0, 2])
         in2 = tf.reshape(in1, [-1, num_of_input_nodes])
         in3 = tf.matmul(in2, weight1_var) + bias1_var
-        in4 = tf.split(in3, len(USE_COLS) * learn_minute_ago, 0)
+        in4 = tf.split(in3, sequesnce_num, 0)
 
         cell = tf.compat.v1.nn.rnn_cell.BasicLSTMCell(num_of_hidden_nodes, forget_bias=forget_bias, state_is_tuple=False)
         rnn_output, states_op = tf.compat.v1.nn.static_rnn(cell, in4, initial_state=istate_ph)
@@ -198,17 +198,22 @@ def training(optimizer, loss_op):
         return training_op
 
 
-def get_batch(batch_size, X, t):
+def get_batch(batch_size, X, y):
     rnum = [random.randint(0, len(X) - 1) for x in range(batch_size)]
-    xs = np.array([[[y] for y in list(X[r])] for r in rnum])
-    ts = np.array([[t[r]] for r in rnum])
-    return xs, ts
+    xs = np.array([[[x] for x in list(X[r])] for r in rnum])
+    ys = np.array([[y[r]] for r in rnum])
+    return xs, ys
 
 
-def calc_accuracy(inputs, ts, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=False):
+def make_prediction(X_test, Y_test):
+    return np.array([[[y] for y in x] for x in X_test]), np.array([[x] for x in Y_test])
+
+
+def calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=False):
+    inputs, ys = make_prediction(X_test, Y_test)
     pred_dict = {
         input_ph:  inputs,
-        supervisor_ph: ts,
+        supervisor_ph: ys,
         istate_ph:    np.zeros((num_of_prediction_epochs, num_of_hidden_nodes * 2)),
     }
     output = sess.run([output_op], feed_dict=pred_dict)
@@ -217,9 +222,9 @@ def calc_accuracy(inputs, ts, output_op, input_ph, supervisor_ph, istate_ph, ses
         [print(list(x)[0]) for x in i]
         print("output: %f, correct: %d" % (p, q))
     if prints:
-        [print_result(i, p, q) for i, p, q in zip(inputs, output[0], ts)]
+        [print_result(i, p, q) for i, p, q in zip(inputs, output[0], ys)]
 
-    opt = abs(output - ts)[0]
+    opt = abs(output - ys)[0]
     total = sum([1 if x[0] < 0.05 else 0 for x in opt])
-    print("accuracy %f" % (total / float(len(ts))))
+    print("accuracy %f" % (total / float(len(ys))))
     return output
