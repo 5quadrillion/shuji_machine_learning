@@ -1,25 +1,17 @@
 # coding=utf-8
 import numpy as np
 import pandas as pd
-import matplotlib
-import matplotlib.pylab as plt
-import seaborn as sns
-import sys
 import warnings
-import argparse
-import datetime
-import time
-import util
-from sklearn import linear_model
 from sklearn.neighbors import KNeighborsRegressor
 import pickle
 import os
 from joblib import Parallel, delayed
+from ..util import knn_util
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
 if __name__ == '__main__':
-    args = util.get_args()
+    args = knn_util.get_args()
     if not os.path.exists(args.outpath):
         os.makedirs(args.outpath)
 
@@ -31,19 +23,19 @@ if __name__ == '__main__':
     print("データセット作成")
     # pandas_table = pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=5615872, engine='python')
     table = np.array(pd.read_csv(args.input, usecols=["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"], sep=",", skipfooter=4500000, engine='python'), dtype=np.float)
-    # table = util.add_technical_values(table, mvave_list)
+    # table = common.add_technical_values(table, mvave_list)
 
     # 説明変数、非説明変数を作成
     print("説明変数、被説明変数を作成")
-    X = util.generate_explanatory_variables(_table=table, _learn_minute_ago=args.learn_minute_ago, n=PARALLEL_NUM)
-    Y = util.generate_dependent_variables(table, X, args.predict_minute_later)
+    X = knn_util.generate_explanatory_variables(_table=table, _learn_minute_ago=args.learn_minute_ago, n=PARALLEL_NUM)
+    Y = knn_util.generate_dependent_variables(table, X, args.predict_minute_later)
 
     # メモリクリア
     table = None
 
     # 正規化
     print("正規化開始")
-    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(util.normalize2)(x, args.learn_minute_ago) for x in np.array_split(X, PARALLEL_NUM)])
+    result_tables = Parallel(n_jobs=PARALLEL_NUM)([delayed(knn_util.normalize2)(x, args.learn_minute_ago) for x in np.array_split(X, PARALLEL_NUM)])
     X = np.vstack(result_tables)
 
     # XとYを学習データとテストデータ(2017年～)に分ける
@@ -94,7 +86,7 @@ if __name__ == '__main__':
         # result.columns = ['Y_pred']
         # result['Y_test'] = Y_test
 
-        sum_min, correct_num, entry_num, entry_correct_num, reward = util.get_result(
+        sum_min, correct_num, entry_num, entry_correct_num, reward = knn_util.get_result(
             Y_test=Y_test, Y_pred=Y_pred, out_tsv_path="{0}/{1}.tsv".format(args.outpath, counter))
         total_min += sum_min
         total_correct += correct_num
