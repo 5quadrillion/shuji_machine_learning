@@ -1,21 +1,14 @@
 # coding=utf-8
 import numpy as np
 import pandas as pd
-import matplotlib
-import matplotlib.pylab as plt
-import seaborn as sns
-import sys
 import warnings
-import argparse
-import datetime
-import time
-import util
 from sklearn import linear_model
+from ..util import common, linear_util, Position
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
 if __name__ == '__main__':
-    args = util.get_args()
+    args = linear_util.get_args()
     pre_minute = args.minute
 
     DAY_AGO = 25  # 何日前までのデータを使用するのかを設定
@@ -24,14 +17,14 @@ if __name__ == '__main__':
 
     # pandasのDataFrameのままでは扱いにくい+実行速度が遅いため、numpyに変換
     table = np.array(pd.read_csv(args.input))
-    table = util.add_technical_values(table, mvave_list)
+    table = common.add_technical_values(table, mvave_list)
 
     # 説明変数、非説明変数を作成
-    X = util.generate_explanatory_variables(table, DAY_AGO, TECH_NUM)
-    Y = util.generate_dependent_variables(table, X, pre_minute)
+    X = linear_util.generate_explanatory_variables(table, DAY_AGO, TECH_NUM)
+    Y = linear_util.generate_dependent_variables(table, X, pre_minute)
 
     # 正規化
-    X, Y = util.normalize(X, Y, DAY_AGO)
+    X, Y = linear_util.normalize(X, Y, DAY_AGO)
 
     # XとYを学習データとテストデータ(2017年～)に分ける
     m_day = 60 * 24
@@ -68,7 +61,7 @@ if __name__ == '__main__':
             else:
                 buy_sell_list.append(False)
 
-        judge, correct, reward = util.get_result(Y_test=Y_test, Y_pred=Y_pred, output_path=args.output, result=result)
+        judge, correct, reward = linear_util.get_result(Y_test=Y_test, Y_pred=Y_pred, output_path=args.output, result=result)
         total_reward = total_reward + reward
         total_judge = total_judge + judge
         total_correct = total_correct + correct
@@ -77,7 +70,7 @@ if __name__ == '__main__':
     print("予測総数：{0}\t正解数：{1}\t正解率：{2:.3f}\t利益合計：{3:.3f}".format(
         total_judge, total_correct, total_correct / total_judge * 100, total_reward))
 
-    pos = util.Position()
+    pos = Position.Position()
     max_pos = 0
     min_pos = 0
     for i, f in enumerate(buy_sell_list):
