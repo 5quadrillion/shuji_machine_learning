@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import warnings
 from sklearn import linear_model
-from ..util import common, linear_util, Position
+from ..util import common, linear_util
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     print("予測総数：{0}\t正解数：{1}\t正解率：{2:.3f}\t利益合計：{3:.3f}".format(
         total_judge, total_correct, total_correct / total_judge * 100, total_reward))
 
-    pos = Position.Position()
+    pos = linear_util.Position()
     max_pos = 0
     min_pos = 0
     for i, f in enumerate(buy_sell_list):
