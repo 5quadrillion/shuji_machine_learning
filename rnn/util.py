@@ -12,12 +12,12 @@ USE_COLS = ["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>", "<VOL>"]
 num_of_input_nodes = 1
 num_of_hidden_nodes = 80
 num_of_output_nodes = 1
-num_of_training_epochs = 5000
+num_of_training_epochs = 500000
 size_of_mini_batch = 100
 num_of_prediction_epochs = 100
-learning_rate = 0.01
 forget_bias = 0.8
 sequesnce_num = 17
+
 
 def get_args():
     # 準備
@@ -26,13 +26,14 @@ def get_args():
     parser.add_argument("--input", "-i", help="入力ファイル csv", default="../data/USDJPY_minute_20190104.csv")
     parser.add_argument("--outpath", "-o", help="出力ファイル",
                         default="output/result{}.txt".format(int(time.mktime(datetime.datetime.now().timetuple()))))
-    parser.add_argument("--learn_minute_ago", "-l", help="何分前までの値を使って学習するか", type=int, default=120)
+    parser.add_argument("--learn_minute_ago", "-l", help="何分前までの値を使って学習するか", type=int, default=100)
     parser.add_argument("--predict_minute_later", "-p", help="何分後の値を予想するか", type=int, default=15)
     parser.add_argument("--model", "-m", help="モデルのdumpデータのpath", default="")
+    # parser.add_argument("--rate", "-r", help="learning_rate", default=0.01)
     return parser.parse_args()
 
 
-def add_technical_values(_table, _moving_average_list=[5, 21, 34, 144]):
+def add_technical_values(_table, _moving_average_list=[21, 34, 144, 200]):
     # 5分移動平均線を追加
     _table = np.c_[_table, np.zeros((len(_table), 1))]  # 列の追加
     ave = _moving_average_list[0]
@@ -204,29 +205,36 @@ def get_batch(batch_size, X, y):
     return xs, ys
 
 
-def make_prediction(X_test, Y_test):
-    r = random.randint(0, len(X_test) - size_of_mini_batch - 1)
-    return np.array([[[y] for y in x] for x in X_test[r:r+size_of_mini_batch]]), np.array([[x] for x in Y_test[r:r+size_of_mini_batch]])
+def make_prediction(X_test, Y_test, offset):
+    return np.array([[[y] for y in x] for x in X_test[offset:offset+size_of_mini_batch]]), np.array([[x] for x in Y_test[offset:offset+size_of_mini_batch]])
 
 
-def calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=False):
-    inputs, ys = make_prediction(X_test, Y_test)
-    pred_dict = {
-        input_ph:  inputs,
-        supervisor_ph: ys,
-        istate_ph:    np.zeros((num_of_prediction_epochs, num_of_hidden_nodes * 2)),
-    }
-    output = sess.run([output_op], feed_dict=pred_dict)
-
-    def print_result(i, p, q):
-        [print(list(x)[0]) for x in i]
-        print("output: {}, correct: {}".format(p, q))
-    if prints:
-        [print_result(i, p, q) for i, p, q in zip(inputs, output[0], ys)]
-
+def calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, rate, prints=False):
+    correct = 0
     total = 0
-    for n in range(0, len(ys)):
-        if output[0][n]*ys[n] > 0:
+    file = open('output.txt', 'a')
+    for offset in range(0, len(X_test) - size_of_mini_batch):
+        if offset % 100 == 0:
+            inputs, ys = make_prediction(X_test, Y_test, offset)
+            pred_dict = {
+                input_ph:  inputs,
+                supervisor_ph: ys,
+                istate_ph:    np.zeros((num_of_prediction_epochs, num_of_hidden_nodes * 2)),
+            }
+            output = sess.run([output_op], feed_dict=pred_dict)
+
+            def print_result(i, p, q):
+                # [print(list(x)[0]) for x in i]
+                print("offset: {}, output: {}, correct: {}".format(offset, p, q))
+            if prints:
+                # [print_result(i, p, q) for i, p, q in zip(inputs, output[0], ys)]
+                file.write("offset: {}, output: {}, correct: {}".format(offset, output[0][-1], ys[-1]))
+                print("offset: {}, output: {}, correct: {}".format(offset, output[0][-1], ys[-1]))
+
+            if output[0][-1]*ys[-1] > 0:
+                correct += 1
             total += 1
-    print("accuracy %f" % (total / float(len(ys))))
-    return output
+    print("l_rate: {}, accuracy: {}".format(rate, correct / float(total)))
+    file.write("l_rate: {}, accuracy: {}".format(rate, correct / float(total)))
+    file.close()
+    # return output

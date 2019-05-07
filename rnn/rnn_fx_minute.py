@@ -47,51 +47,54 @@ if __name__ == '__main__':
     X = np.vstack(result_tables)
 
     # 学習用とテストように分ける
-    learning_len = int(len(X)*0.8)
+    learning_len = int(len(X)*0.9)
     X_train = X[0: learning_len, :]
     Y_train = Y[0: learning_len]
 
     X_test = X[learning_len: -args.predict_minute_later, :]
     Y_test = Y[learning_len: -args.predict_minute_later]
 
-    # モデル作成
-    print("モデル作成開始")
-    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=util.learning_rate)
-    with tf.Graph().as_default():
-        input_ph = tf.compat.v1.placeholder(tf.float32, [None, X_train.shape[1], util.num_of_input_nodes], name="input")
-        supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
-        istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
+    learning_rate_list = [0.001, 0.003, 0.07, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 0.7]
 
-        output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
-        loss_op = util.loss(output_op, supervisor_ph)
-        training_op = util.training(optimizer, loss_op)
+    for rate in learning_rate_list:
+        # モデル作成
+        # print("モデル作成開始")
+        optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=float(rate))
+        with tf.Graph().as_default():
+            input_ph = tf.compat.v1.placeholder(tf.float32, [None, X_train.shape[1], util.num_of_input_nodes], name="input")
+            supervisor_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_output_nodes], name="supervisor")
+            istate_ph = tf.compat.v1.placeholder(tf.float32, [None, util.num_of_hidden_nodes * 2], name="istate")
 
-        summary_op = tf.compat.v1.summary.merge_all()
-        init = tf.compat.v1.initialize_all_variables()
+            output_op, states_op, datas_op = util.inference(input_ph, istate_ph)
+            loss_op = util.loss(output_op, supervisor_ph)
+            training_op = util.training(optimizer, loss_op)
 
-        with tf.compat.v1.Session() as sess:
-            saver = tf.compat.v1.train.Saver()
-            summary_writer = tf.compat.v1.summary.FileWriter("/tmp/tensorflow_log", graph=sess.graph)
-            sess.run(init)
+            summary_op = tf.compat.v1.summary.merge_all()
+            init = tf.compat.v1.initialize_all_variables()
 
-            for epoch in range(util.num_of_training_epochs):
-                inputs, supervisors = util.get_batch(util.size_of_mini_batch, X_train, Y_train)
-                train_dict = {
-                    input_ph: inputs,
-                    supervisor_ph: supervisors,
-                    istate_ph: np.zeros((util.size_of_mini_batch, util.num_of_hidden_nodes * 2)),
-                }
-                sess.run(training_op, feed_dict=train_dict)
+            with tf.compat.v1.Session() as sess:
+                saver = tf.compat.v1.train.Saver()
+                summary_writer = tf.compat.v1.summary.FileWriter("/tmp/tensorflow_log", graph=sess.graph)
+                sess.run(init)
 
-                if (epoch) % 100 == 0:
-                    summary_str, train_loss = sess.run([summary_op, loss_op], feed_dict=train_dict)
-                    print("train#%d, train loss: %e" % (epoch, train_loss))
-                    summary_writer.add_summary(summary_str, epoch)
-                    if (epoch) % 500 == 0:
-                        util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess)
+                for epoch in range(util.num_of_training_epochs):
+                    inputs, supervisors = util.get_batch(util.size_of_mini_batch, X_train, Y_train)
+                    train_dict = {
+                        input_ph: inputs,
+                        supervisor_ph: supervisors,
+                        istate_ph: np.zeros((util.size_of_mini_batch, util.num_of_hidden_nodes * 2)),
+                    }
+                    sess.run(training_op, feed_dict=train_dict)
 
-            util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, prints=True)
-            datas = sess.run(datas_op)
-            filename = "RNNmodel/{}_M{}_L{}.ckpt".format(args.model, args.predict_minute_later,
-                                                               args.learn_minute_ago)
-            # saver.save(sess, filename)
+                    if (epoch) % 100 == 0:
+                        summary_str, train_loss = sess.run([summary_op, loss_op], feed_dict=train_dict)
+                        # print("train#%d, train loss: %e" % (epoch, train_loss))
+                        summary_writer.add_summary(summary_str, epoch)
+                        # if (epoch) % 500 == 0:
+                        #     util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess)
+
+                util.calc_accuracy(X_test, Y_test, output_op, input_ph, supervisor_ph, istate_ph, sess, rate, prints=True)
+                datas = sess.run(datas_op)
+                filename = "RNNmodel/{}_M{}_L{}.ckpt".format(args.model, args.predict_minute_later,
+                                                                   args.learn_minute_ago)
+                # saver.save(sess, filename)
