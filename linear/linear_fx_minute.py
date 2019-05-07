@@ -3,7 +3,9 @@ import numpy as np
 import pandas as pd
 import warnings
 from sklearn import linear_model
-from ..util import common, linear_util
+import sys,os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from util import common, linear_util
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 

@@ -1,5 +1,4 @@
 # coding=utf-8
-import os
 import warnings
 
 import numpy as np
@@ -7,7 +6,9 @@ import pandas as pd
 import tensorflow as tf
 from joblib import Parallel, delayed
 
-from ..util import common, rnn_util
+import sys,os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from util import common, rnn_util
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 

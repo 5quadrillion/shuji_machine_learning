@@ -6,7 +6,9 @@ from sklearn.neighbors import KNeighborsRegressor
 import pickle
 import os
 from joblib import Parallel, delayed
-from ..util import knn_util
+import sys,os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from util import knn_util
 
 warnings.filterwarnings('ignore')  # 実行上問題ない注意は非表示にする
 
